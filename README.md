@@ -43,15 +43,16 @@ cd maestro
 uv pip install -e .
 ```
 
-3. Run tests:
+3. Run the formatter:
 ```bash
-uv run pytest
+uv run ruff format
 ```
 
-4. Run linter:
+4. Run the linter:
 ```bash
-uv run black
+uv run ruff check
 ```
+
 
 ## Contributing
 

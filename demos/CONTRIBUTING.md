@@ -43,16 +43,21 @@ git push origin feature/your-feature-name
 
 ## Code Style
 
-We use [black](https://github.com/psf/black) for code formatting and [flake8](https://flake8.pycqa.org/) for linting. To ensure your code meets our style guidelines:
+We use [ruff](https://docs.astral.sh/ruff/) for code formatting and linting. To ensure your code meets our style guidelines:
 
 1. Install development dependencies:
 ```bash
-uv pip install -e ".[dev]"
+uv pip install -e .
 ```
 
-2. Run the linter:
+2. Run the formatter:
 ```bash
-uv run lint
+uv run ruff format
+```
+
+3. Run the linter:
+```bash
+uv run ruff check
 ```
 
 ## Commit Messages
@@ -85,10 +90,11 @@ uv run commit "feat(agent): add new agent type"
 ## Pull Request Process
 
 1. Ensure all dependencies are installed (`uv pip install -e .`).
-2. Run the test suite (`uv run test`).
-3. Run the linter (`uv run lint`).
-4. Update documentation if necessary.
-5. Create a pull request with a clear description of the changes.
+2. Run the test suite (`uv run pytest`).
+3. Run the formatter (`uv run ruff format`).
+4. Run the linter (`uv run ruff check`).
+5. Update documentation if necessary.
+6. Create a pull request with a clear description of the changes.
 
 ## Additional Resources
 
@@ -114,33 +120,6 @@ uv run commit "feat(agent): add new agent type"
 │── README.md               # Project documentation
 │── CONTRIBUTING.md         # Contribution guidelines
 ```
-
----
-
-## Setting Up Your Environment
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/i-am-bee/bee-hive.git
-cd bee-hive
-```
-
-### 2. Set Up the Virtual Environment
-
-```bash
-poetry env use python3
-poetry install
-poetry shell
-```
-
-### 3. Configure Environment Variables
-
-- Copy `example.env` and rename it to `.env`:
-
-  ```bash
-  cp example.env .env
-  ```
 
 ---
 
@@ -238,7 +217,6 @@ spec:
 
 ### Debugging Tips
 
-- Ensure all dependencies are installed (`poetry install`).
 - Check for missing agents (`agent_store.json` must contain registered agents).
 - Validate YAML schemas using `maestro validate` before running workflows.
 

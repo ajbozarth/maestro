@@ -40,16 +40,21 @@ git push origin feature/your-feature-name
 
 ## Code Style
 
-We use [black](https://github.com/psf/black) for code formatting. To ensure your code meets our style guidelines:
+We use [ruff](https://docs.astral.sh/ruff/) for code formatting and linting. To ensure your code meets our style guidelines:
 
 1. Install development dependencies:
 ```bash
 uv pip install -e .
 ```
 
-2. Run the linter:
+2. Run the formatter:
 ```bash
-uv run black
+uv run ruff format
+```
+
+3. Run the linter:
+```bash
+uv run ruff check
 ```
 
 ## Commit Messages
@@ -83,9 +88,10 @@ git commit -m "feat(agent): add new agent type"
 
 1. Ensure all dependencies are installed (`uv pip install -e .`).
 2. Run the test suite (`uv run pytest`).
-3. Run the linter (`uv run black`).
-4. Update documentation if necessary.
-5. Create a pull request with a clear description of the changes.
+3. Run the formatter (`uv run ruff format`).
+4. Run the linter (`uv run ruff check`).
+5. Update documentation if necessary.
+6. Create a pull request with a clear description of the changes.
 
 ## Additional Resources
 
