@@ -10,14 +10,19 @@ git clone https://github.com/AI4quantum/maestro.git
 cd maestro
 ```
 
-2. Install dependencies:
+2. Activate the virtual environment:
+```bash
+uv venv --python 3.12
+```
+
+3. Install dependencies:
 ```bash
 uv pip install -e .
 ```
 
-3. Activate the virtual environment:
+4. Set up pre-commit
 ```bash
-uv venv --python 3.12
+uv run pre-commit install
 ```
 
 ## Development Workflow
