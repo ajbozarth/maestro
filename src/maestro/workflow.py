@@ -49,6 +49,7 @@ class Workflow:
         self.logger = logger
         self._opik = None
         self.scoring_metrics = None
+        self.workflow_models = {}
 
     def to_mermaid(self, kind="sequenceDiagram", orientation="TD") -> str:
         wf = self.workflow
@@ -119,7 +120,6 @@ class Workflow:
                         continue
                     else:
                         agent_def = instance
-
                 agent_def["spec"]["framework"] = agent_def["spec"].get(
                     "framework", AgentFramework.BEEAI
                 )
@@ -136,7 +136,11 @@ class Workflow:
                 agent_instance.run = log_agent_run(
                     self.workflow_id, agent_name, agent_model
                 )(bound_method)
+
                 self.agents[agent_name] = agent_instance
+                if not self._is_scoring_agent(agent_def):
+                    self.workflow_models[agent_name] = agent_model
+
         else:
             for name in self.workflow["spec"]["template"]["agents"]:
                 instance, restored = restore_agent(name)
@@ -445,6 +449,20 @@ class Workflow:
                         return True
         return False
 
+    def _is_scoring_agent(self, agent_def: dict) -> bool:
+        """Check if an agent definition is a scoring agent."""
+        if isinstance(agent_def, dict):
+            if (
+                agent_def.get("metadata", {}).get("labels", {}).get("custom_agent")
+                == "scoring_agent"
+            ):
+                return True
+            if agent_def.get("spec", {}).get("framework") == "custom":
+                agent_name = agent_def.get("metadata", {}).get("name", "").lower()
+                if "score" in agent_name or "evaluate" in agent_name:
+                    return True
+        return False
+
     def _initialize_opik(self) -> None:
         """Initialize Opik for tracing if not already initialized."""
         if self._opik is None:
@@ -458,8 +476,19 @@ class Workflow:
             "steps_executed": list(step_results.keys()),
             "total_steps": len(step_results),
         }
+
+        if self.workflow_models:
+            metadata["workflow_models"] = self.workflow_models
         if self.scoring_metrics:
-            metadata.update(self.scoring_metrics)
+            scoring_metadata = self.scoring_metrics.copy()
+            if "model" in scoring_metadata:
+                scoring_metadata["scoring_model"] = scoring_metadata.pop("model")
+            if "provider" in scoring_metadata:
+                scoring_metadata["framework_provider"] = scoring_metadata.pop(
+                    "provider"
+                )
+            scoring_metadata.pop("agent", None)
+            metadata.update(scoring_metadata)
         return metadata
 
     def _create_opik_trace(
