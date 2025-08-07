@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
+# Copyright © 2025 IBM
 
 import os
 import json
@@ -29,6 +31,7 @@ from maestro.agents.openai_mcp import (
     MCPServerInstance,
     get_mcp_servers,
 )
+from maestro.agents.utils import TokenUsageExtractor
 
 from dotenv import load_dotenv
 
@@ -217,6 +220,37 @@ class OpenAIAgent(MaestroAgent):
                 )
         return None
 
+    async def _get_actual_token_usage(
+        self, prompt: str, response: str
+    ) -> Dict[str, int]:
+        """Get actual token usage by making a direct API call."""
+        try:
+            if self.base_url == OPENAI_DEFAULT_URL or "openai" in self.base_url.lower():
+                # Make a simple chat completion call to get token usage
+                messages = [
+                    {"role": "user", "content": prompt},
+                    {"role": "assistant", "content": response},
+                ]
+                completion = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    max_tokens=1,
+                    temperature=0,
+                )
+
+                token_usage = TokenUsageExtractor.extract_from_result(
+                    completion, f"OpenAIAgent {self.agent_name}", self.print
+                )
+                if token_usage["total_tokens"] > 0:
+                    return token_usage
+
+        except Exception as e:
+            self.print(
+                f"DEBUG [OpenAIAgent {self.agent_name}]: Could not get actual token usage from API: {e}"
+            )
+
+        return self.track_tokens(prompt, response)
+
     def _process_agent_result(self, result: Optional[Any]) -> str:
         if result is None:
             self.print(
@@ -224,6 +258,7 @@ class OpenAIAgent(MaestroAgent):
             )
             return "Error: Agent run failed to produce a result."
 
+        self._extract_token_usage_from_result(result)
         final_output = getattr(result, "final_output", None)
         if final_output is not None:
             final_output_str = str(final_output)
@@ -241,6 +276,10 @@ class OpenAIAgent(MaestroAgent):
             fallback_str = f"Agent run finished without explicit final output. Last message: {last_message_content}"
             self.print(f"DEBUG [OpenAIAgent {self.agent_name}]: {fallback_str}")
             return fallback_str
+
+    def _extract_token_usage_from_result(self, result: Any) -> None:
+        """Try to extract token usage from the result object."""
+        self.extract_and_set_token_usage_from_result(result)
 
     # TODO: Cleanup streaming vs non-streaming
     # Maestro doesn't yet have support to specify streaming vs non-streaming, so these
@@ -312,6 +351,17 @@ class OpenAIAgent(MaestroAgent):
 
         # Process result and print final output once
         final_str = self._process_agent_result(result)
+
+        if self.total_tokens == 0:
+            actual_usage = await self._get_actual_token_usage(prompt, final_str)
+            self.prompt_tokens = actual_usage["prompt_tokens"]
+            self.response_tokens = actual_usage["response_tokens"]
+            self.total_tokens = actual_usage["total_tokens"]
+
+            self.print(
+                f"INFO [OpenAIAgent {self.agent_name}]: Actual API tokens - Prompt: {self.prompt_tokens}, Response: {self.response_tokens}, Total: {self.total_tokens}"
+            )
+
         self.print(f"Response from {self.agent_name}: {final_str}")
 
         return final_str
@@ -441,6 +491,16 @@ class OpenAIAgent(MaestroAgent):
 
         # Create the final output from all the bits we've received
         final_output_str = "".join(final_output_chunks)
+
+        if self.total_tokens == 0:
+            actual_usage = await self._get_actual_token_usage(prompt, final_output_str)
+            self.prompt_tokens = actual_usage["prompt_tokens"]
+            self.response_tokens = actual_usage["response_tokens"]
+            self.total_tokens = actual_usage["total_tokens"]
+
+            self.print(
+                f"INFO [OpenAIAgent {self.agent_name}]: Actual API tokens - Prompt: {self.prompt_tokens}, Response: {self.response_tokens}, Total: {self.total_tokens}"
+            )
 
         self.print(
             f"Final Response from {self.agent_name} (streaming collected): {final_output_str}"
