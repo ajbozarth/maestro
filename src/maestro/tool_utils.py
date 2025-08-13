@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import base64
 import asyncio
 from kubernetes import client, config
 
@@ -17,6 +18,12 @@ singular = "mcpserver"
 group = "toolhive.stacklok.dev"
 version = "v1alpha1"
 kind = "MCPServer"
+
+remoteGroup = "maestro.ai4quantum.com"
+remoteVersion = "v1alpha1"
+remoteKind = "RemoteMCPServer"
+remotePlural = "remotemcpservers"
+remoteSingular = "remotemcpserver"
 
 
 def find_mcp_service(name):
@@ -49,12 +56,48 @@ def find_mcp_service(name):
                 f"http://{service.metadata.name}:{service.spec.ports[0].port}",
                 transport,
                 external,
+                None,
             )
-    return None, None, None, None
+
+    # remote MCP server
+    remote_crd = apis.get_namespaced_custom_object(
+        group=remoteGroup,
+        version=remoteVersion,
+        name=name,
+        namespace=namespace,
+        plural=remotePlural,
+    )
+    if remote_crd:
+        transport = remote_crd["spec"]["transport"]
+        url = remote_crd["spec"]["url"]
+        name = remote_crd["spec"]["name"]
+        if url.endswith("/"):
+            url = url[:-1]
+        if url.endswith("/mcp"):
+            url = url[: -len("/mcp")]
+        elif url.endswith("/sse"):
+            url = url[: -len("/sse")]
+        accessToken = None
+        secretName = remote_crd["spec"].get("secretName")
+        if secretName:
+            secret = v1.read_namespaced_secret(name=secretName, namespace="default")
+            if secret:
+                accessToken = base64.b64decode(secret.data["MCP_ACCESS_TOKEN"]).decode(
+                    "utf-8"
+                )
+        return (name, url, transport, url, accessToken)
+
+    return None, None, None, None, None
 
 
-async def get_http_tools(url, converter, stack):
-    transport = await stack.enter_async_context(streamablehttp_client(url + "/mcp"))
+async def get_http_tools(url, converter, stack, accessToken):
+    if accessToken:
+        headers = {"Authorization": f"Bearer {accessToken}"}
+        transport = await stack.enter_async_context(
+            streamablehttp_client(url + "/mcp", headers=headers)
+        )
+    else:
+        transport = await stack.enter_async_context(streamablehttp_client(url + "/mcp"))
     stdio, write, _ = transport
     session = await stack.enter_async_context(ClientSession(stdio, write))
     await session.initialize()
@@ -63,7 +106,7 @@ async def get_http_tools(url, converter, stack):
         converted = []
         for tool in tools.tools:
             try:
-                print(f"puttings ession:{session}")
+                print(f"puttings session:{session}")
                 converted.append(converter(session, tool))
             except Exception as e:
                 print(e)
@@ -71,8 +114,14 @@ async def get_http_tools(url, converter, stack):
     return tools.tools
 
 
-async def get_sse_tools(url, converter, stack):
-    transport = await stack.enter_async_context(sse_client(url + "/sse"))
+async def get_sse_tools(url, converter, stack, accessToken):
+    if accessToken:
+        headers = {"Authorization": f"Bearer {accessToken}"}
+        transport = await stack.enter_async_context(
+            streamablehttp_client(url + "/mcp", headers=headers)
+        )
+    else:
+        transport = await stack.enter_async_context(sse_client(url + "/sse"))
     stdio, write = transport
     session = await stack.enter_async_context(ClientSession(stdio, write))
     await session.initialize()
@@ -87,7 +136,9 @@ async def get_sse_tools(url, converter, stack):
 
 
 async def get_mcp_tools(service_name, converter, stack):
-    service, service_url, transport, external = find_mcp_service(service_name)
+    service, service_url, transport, external, accessToken = find_mcp_service(
+        service_name
+    )
 
     if service:
         print(f"Service Name: {service}")
@@ -106,9 +157,9 @@ async def get_mcp_tools(service_name, converter, stack):
             url = service_url
 
         if transport == "streamable-http":
-            tools = await get_http_tools(url, converter, stack)
+            tools = await get_http_tools(url, converter, stack, accessToken)
         elif transport == "sse" or transport == "stdio":
-            tools = await get_sse_tools(url, converter, stack)
+            tools = await get_sse_tools(url, converter, stack, accessToken)
         else:
             print(f"{transport} transport not supported")
         print(f"Available tools: {[tool.name for tool in tools]}")
