@@ -1,0 +1,20 @@
+apiVersion: maestro/v1
+kind: Workflow
+metadata:
+  name: slack
+  labels:
+    app: slack
+spec:
+  template:
+    metadata:
+      name: post slack message
+      labels:
+        app: slck
+    agents:
+    - slack
+    prompt: Post "I am Maestro agent!!  I can help you to do things done" message to slacl channel "CTBJXJBJN"
+    steps:
+    - name: slack
+      agent: slack
+
+
