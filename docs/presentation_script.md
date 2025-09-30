@@ -48,7 +48,7 @@ spec:
   - weather
 ```
 
-This configuration creates a weather agent using the llama3.1 model that can access a weather tool. The declarative nature makes it easy to understand and modify.
+This configuration creates a weather agent using the gpt-oss model that can access a weather tool. The declarative nature makes it easy to understand and modify.
 
 ## Workflows in Maestro (2.5 minutes)
 Workflows are where Maestro truly shines. They allow you to define how agents interact and collaborate to accomplish complex tasks. Maestro supports sophisticated flow controls:
@@ -95,7 +95,7 @@ This workflow coordinates three specialized agents: one to gather stock informat
 ## Tools in Maestro (2 minutes)
 Tools extend the capabilities of agents by connecting them to external services and functionalities. Maestro provides several ways to integrate tools:
 
-- **MCP Tools**: Model Control Protocol tools for standardized integration
+- **MCP Tools**: Model Context Protocol tools for standardized integration
 - **Built-in Tools**: Weather, search, code execution, and more
 - **Custom Tools**: Create and integrate your own specialized tools
 
