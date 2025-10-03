@@ -22,7 +22,7 @@ Maestro is an orchestration framework for AI agents that enables the creation, m
 ## Agents in Maestro
 
 ### Supported Agent Types
-- **BeeAI**: Default agent framework with local and remote options
+- **BeeAI**: Integration with BeeAI framework
 - **CrewAI**: Integration with CrewAI framework
 - **DSPy**: Integration with DSPy framework for reasoning
 - **OpenAI**: Direct integration with OpenAI models
