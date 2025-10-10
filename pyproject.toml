@@ -61,6 +61,13 @@ maestro = "maestro.cli.run_maestro:__run_cli"
 [tool.uv]
 package = true
 
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "build_backend"
+backend-path = ["."]
+
+[tool.setuptools]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["maestro*"]
