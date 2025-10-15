@@ -2,6 +2,10 @@
 
 Thank you for your interest in contributing to Maestro! This document provides guidelines and instructions for contributing to the project.
 
+## Requirements
+- Python 3.11, 3.12, or 3.13
+- uv installed (refer to the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) for instructions)
+
 ## Development Setup
 
 1. Fork in the cloud

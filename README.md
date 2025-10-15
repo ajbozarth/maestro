@@ -7,6 +7,7 @@ Maestro is a tool for managing and running AI agents and workflows.
 ### Requirements
 
 - Python 3.11, 3.12, or 3.13
+- uv installed (for dev install)
 
 ### Install
 
