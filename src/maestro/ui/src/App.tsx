@@ -28,10 +28,26 @@ function App() {
     responseTokens: 0,
     totalTokens: 0,
   })
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode')
+    if (saved !== null) return saved === 'true'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
 
   useEffect(() => {
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' })
-  }, [])
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark-mode')
+      document.body.style.backgroundColor = '#1a1a1a'
+    } else {
+      document.documentElement.classList.remove('dark-mode')
+      document.body.style.backgroundColor = '#ffffff'
+    }
+    localStorage.setItem('darkMode', isDarkMode.toString())
+  }, [isDarkMode])
+
+  useEffect(() => {
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: isDarkMode ? 'dark' : 'default' })
+  }, [isDarkMode])
 
   const checkHealth = useCallback(async () => {
     try {
@@ -99,9 +115,7 @@ function App() {
   const retryLastMessage = useCallback(async () => {
     if (!lastUserPrompt || isLoading) return
     
-    // Remove the last assistant message(s) if they exist
     setMessages((m) => {
-      // Find last user message index
       let lastUserIndex = -1
       for (let i = m.length - 1; i >= 0; i--) {
         if (m[i].type === 'user') {
@@ -147,21 +161,36 @@ function App() {
       display: 'flex', 
       flexDirection: 'column', 
       height: '100vh',
-      maxWidth: 1200,
-      margin: '0 auto',
-      backgroundColor: 'var(--bg-color, #ffffff)',
+      backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+      color: isDarkMode ? '#fff' : '#000',
     }}>
-      {/* Header */}
       <div style={{ 
         padding: '16px 24px', 
-        borderBottom: '1px solid #ddd',
+        borderBottom: isDarkMode ? '1px solid #333' : '1px solid #ddd',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexShrink: 0,
       }}>
-        <h2 style={{ margin: 0 }}>Maestro Workflow UI</h2>
+        <h2 style={{ margin: 0, color: isDarkMode ? '#fff' : '#000' }}>Maestro Workflow UI</h2>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
+              backgroundColor: 'transparent',
+              color: isDarkMode ? '#fff' : '#666',
+              fontSize: '18px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? '☀️' : '🌙'}
+          </button>
           {messages.length > 0 && (
             <button
               onClick={clearConversation}
@@ -169,9 +198,9 @@ function App() {
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                border: '1px solid #ddd',
+                border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
                 backgroundColor: 'transparent',
-                color: '#666',
+                color: isDarkMode ? '#aaa' : '#666',
                 fontSize: '14px',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
                 opacity: isLoading ? 0.5 : 1,
@@ -184,10 +213,10 @@ function App() {
             <div 
               style={{ 
                 fontSize: '13px', 
-                color: '#666',
+                color: isDarkMode ? '#aaa' : '#666',
                 padding: '6px 12px',
                 borderRadius: 8,
-                backgroundColor: '#f5f5f5',
+                backgroundColor: isDarkMode ? '#2a2a2a' : '#f5f5f5',
                 display: 'flex',
                 gap: 8,
               }}
@@ -197,18 +226,28 @@ function App() {
               <span>{tokenUsage.totalTokens.toLocaleString()} tokens</span>
             </div>
           )}
-          <div style={{ fontSize: '14px', color: '#666' }}>Health: {health}</div>
+          <div style={{ fontSize: '14px', color: isDarkMode ? '#aaa' : '#666' }}>Health: {health}</div>
         </div>
       </div>
 
-      {/* Chat Messages Area */}
       <div style={{ 
         flex: 1,
-        overflowY: 'auto',
-        padding: '24px',
         display: 'flex',
-        flexDirection: 'column',
+        overflow: 'hidden',
       }}>
+        <div style={{ 
+          flex: '1 1 70%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRight: isDarkMode ? '1px solid #333' : '1px solid #ddd',
+        }}>
+          <div style={{ 
+            flex: 1,
+            overflowY: 'auto',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
         {messages.length === 0 && !isLoading ? (
           <div style={{ 
             flex: 1, 
@@ -311,89 +350,108 @@ function App() {
             )}
           </>
         )}
-      </div>
+          </div>
 
-      {/* Input Area - Fixed at bottom */}
-      <div style={{ 
-        padding: '16px 24px',
-        borderTop: '1px solid #ddd',
-        backgroundColor: 'var(--bg-color, #ffffff)',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', gap: 12, maxWidth: 1000, margin: '0 auto', alignItems: 'flex-end' }}>
-          <textarea
-            style={{ 
-              flex: 1, 
-              padding: '12px 16px',
-              borderRadius: 16,
-              border: '1px solid #ddd',
-              fontSize: '15px',
-              outline: 'none',
-              resize: 'none',
-              minHeight: 48,
-              maxHeight: 200,
-              fontFamily: 'inherit',
-              lineHeight: '1.5',
-              opacity: isLoading ? 0.6 : 1,
-            }}
-            placeholder="Enter your prompt (Shift+Enter for new line)"
-            value={prompt}
-            disabled={isLoading}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                startStream()
-              }
-            }}
-            rows={1}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement
-              target.style.height = 'auto'
-              target.style.height = Math.min(target.scrollHeight, 200) + 'px'
-            }}
-          />
-          <button 
-            onClick={startStream}
-            disabled={isLoading || !prompt.trim()}
-            style={{
-              padding: '12px 24px',
-              borderRadius: 24,
-              border: 'none',
-              backgroundColor: isLoading || !prompt.trim() ? '#ccc' : '#007AFF',
-              color: 'white',
-              fontSize: '15px',
-              fontWeight: '500',
-              cursor: isLoading || !prompt.trim() ? 'not-allowed' : 'pointer',
-              opacity: isLoading || !prompt.trim() ? 0.6 : 1,
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {isLoading ? 'Sending...' : 'Send'}
-          </button>
+          <div style={{ 
+            padding: '16px 24px',
+            borderTop: isDarkMode ? '1px solid #333' : '1px solid #ddd',
+            backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+              <textarea
+                style={{ 
+                  flex: 1, 
+                  padding: '12px 16px',
+                  borderRadius: 16,
+                  border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
+                  fontSize: '15px',
+                  outline: 'none',
+                  resize: 'none',
+                  minHeight: 48,
+                  maxHeight: 200,
+                  fontFamily: 'inherit',
+                  lineHeight: '1.5',
+                  opacity: isLoading ? 0.6 : 1,
+                  backgroundColor: isDarkMode ? '#2a2a2a' : '#fff',
+                  color: isDarkMode ? '#fff' : '#000',
+                }}
+                placeholder="Enter your prompt (Shift+Enter for new line)"
+                value={prompt}
+                disabled={isLoading}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    startStream()
+                  }
+                }}
+                rows={1}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement
+                  target.style.height = 'auto'
+                  target.style.height = Math.min(target.scrollHeight, 200) + 'px'
+                }}
+              />
+              <button 
+                onClick={startStream}
+                disabled={isLoading || !prompt.trim()}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: 24,
+                  border: 'none',
+                  backgroundColor: isLoading || !prompt.trim() ? '#ccc' : '#007AFF',
+                  color: 'white',
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  cursor: isLoading || !prompt.trim() ? 'not-allowed' : 'pointer',
+                  opacity: isLoading || !prompt.trim() ? 0.6 : 1,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {isLoading ? 'Sending...' : 'Send'}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Diagram Section - Collapsible */}
-      <details style={{ 
-        borderTop: '1px solid #ddd',
-        backgroundColor: '#f9f9f9',
-      }}>
-        <summary style={{ 
-          padding: '12px 24px',
-          cursor: 'pointer',
-          fontWeight: '500',
-          userSelect: 'none',
+        <div style={{ 
+          flex: '0 0 30%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: isDarkMode ? '#0f0f0f' : '#f9f9f9',
+          overflow: 'hidden',
         }}>
-          Workflow Diagram
-        </summary>
-        <div style={{ padding: '16px 24px' }}>
-          {diagramError && (
-            <div style={{ color: 'crimson', marginBottom: 8 }}>Diagram error: {diagramError}</div>
-          )}
-          <div id="mermaid-diagram" style={{ minHeight: 120 }} />
+          <div style={{ 
+            padding: '16px 24px',
+            borderBottom: isDarkMode ? '1px solid #333' : '1px solid #ddd',
+            fontWeight: '500',
+            fontSize: '16px',
+            color: isDarkMode ? '#fff' : '#000',
+          }}>
+            Workflow Diagram
+          </div>
+          <div style={{ 
+            flex: 1,
+            overflowY: 'auto',
+            padding: '24px',
+          }}>
+            {diagramError && (
+              <div style={{ 
+                color: 'crimson', 
+                marginBottom: 16,
+                padding: '12px',
+                backgroundColor: isDarkMode ? '#2a0000' : '#ffebee',
+                borderRadius: 8,
+                border: '1px solid crimson',
+              }}>
+                Diagram error: {diagramError}
+              </div>
+            )}
+            <div id="mermaid-diagram" style={{ minHeight: 120 }} />
+          </div>
         </div>
-      </details>
+      </div>
     </div>
   )
 }
