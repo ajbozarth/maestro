@@ -54,8 +54,7 @@ RUN pip3 install --no-cache-dir --upgrade \
     jsonschema \
     docopt-ng \
     langchain-community \
-    streamlit \
-    streamlit-mermaid \
+    pandas \
     psutil \
     openai-agents \
     opik \
